@@ -1,0 +1,15 @@
+<div ng-style="{
+  display: 'none'
+}" ng-transclude></div>
+<dl class="tabs">
+  <dd ng-repeat="tab in tabCtrl.getTabs()" ng-class="{
+    active: tab.active
+  }" ng-click="tabCtrl.setTab(tab.id)">
+    <a href="" ng-bind="tab.title"></a>
+  </dd>
+</dl>
+<div class="tabs-content">
+  <div class="content" ng-repeat="tab in tabCtrl.getTabs()" ng-class="{
+    active: tab.active
+  }" ng-bind-html="tab.content"></div>
+</div>
