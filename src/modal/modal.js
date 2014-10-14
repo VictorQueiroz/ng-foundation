@@ -189,12 +189,12 @@ angular
 					$modal.$getTemplate().then(onTemplateLoaded);
 				};
 
-				$modal.open = function () {
+				$modal.enter = function () {
 					$modal.$enter();
 				};
 
 				$scope.$show = function () {
-					$modal.open();
+					$modal.enter();
 				};
 
 				$scope.$hide = function () {
@@ -221,7 +221,7 @@ angular
 				});
 
 				var modal = $modal(element, options);
-				element.on('click', modal.open);
+				element.on('click', modal.enter);
 			}
 		};
 	});

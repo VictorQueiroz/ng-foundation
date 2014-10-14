@@ -360,9 +360,9 @@ angular
 	  };
 
 		this.mediaQueries = {
-			small : angular.element(document.querySelector('.foundation-mq-small')).css('font-family').replace(/^[\/\\'"]+|(;\s?})+|[\/\\'"]+$/g, ''),
-			medium : angular.element(document.querySelector('.foundation-mq-medium')).css('font-family').replace(/^[\/\\'"]+|(;\s?})+|[\/\\'"]+$/g, ''),
-			large : angular.element(document.querySelector('.foundation-mq-large')).css('font-family').replace(/^[\/\\'"]+|(;\s?})+|[\/\\'"]+$/g, ''),
+			small: angular.element(document.querySelector('.foundation-mq-small')).css('font-family').replace(/^[\/\\'"]+|(;\s?})+|[\/\\'"]+$/g, ''),
+			medium: angular.element(document.querySelector('.foundation-mq-medium')).css('font-family').replace(/^[\/\\'"]+|(;\s?})+|[\/\\'"]+$/g, ''),
+			large: angular.element(document.querySelector('.foundation-mq-large')).css('font-family').replace(/^[\/\\'"]+|(;\s?})+|[\/\\'"]+$/g, ''),
 			xlarge: angular.element(document.querySelector('.foundation-mq-xlarge')).css('font-family').replace(/^[\/\\'"]+|(;\s?})+|[\/\\'"]+$/g, ''),
 			xxlarge: angular.element(document.querySelector('.foundation-mq-xxlarge')).css('font-family').replace(/^[\/\\'"]+|(;\s?})+|[\/\\'"]+$/g, '')
 		};
@@ -681,12 +681,12 @@ angular
 					$modal.$getTemplate().then(onTemplateLoaded);
 				};
 
-				$modal.open = function () {
+				$modal.enter = function () {
 					$modal.$enter();
 				};
 
 				$scope.$show = function () {
-					$modal.open();
+					$modal.enter();
 				};
 
 				$scope.$hide = function () {
@@ -713,7 +713,7 @@ angular
 				});
 
 				var modal = $modal(element, options);
-				element.on('click', modal.open);
+				element.on('click', modal.enter);
 			}
 		};
 	}]);

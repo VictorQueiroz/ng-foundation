@@ -1,9 +1,7 @@
 describe('dropdown', function () {
 	var $rootScope, $scope, $compile, element;
 
-	beforeEach(module('ngFoundation.tooltip'));
-	beforeEach(module('ngFoundation.foundation'));
-	beforeEach(module('ngFoundation.dropdown'));
+	// beforeEach(module('ngFoundation'));
 
 	beforeEach(inject(function ($injector) {
 		$rootScope = $injector.get('$rootScope');
@@ -15,6 +13,6 @@ describe('dropdown', function () {
 	}));
 
 	it('should compile the directive', function () {
-		console.log(element);
+		console.log(angular.element(document.querySelector('.foundation-mq-small')).css('font-family').replace);
 	});
 });

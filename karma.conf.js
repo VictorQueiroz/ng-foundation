@@ -20,7 +20,8 @@ module.exports = function(config) {
       'bower_components/angular-animate/angular-animate.min.js',
       'bower_components/angular-sanitize/angular-sanitize.min.js',
       'bower_components/angular-mocks/angular-mocks.js',
-      'src/**/*.js'
+      'src/**/*.js',
+      'dist/angular-foundation.tpl.min.js'
     ],
 
 
