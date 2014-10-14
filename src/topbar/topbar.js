@@ -1,3 +1,5 @@
+'use strict';
+
 angular
 	.module('ngFoundation.topbar', [])
 
@@ -201,7 +203,7 @@ angular
 				section.$setTopBar(topBar);
 				topBar.$setSection(section);
 			}
-		}
+		};
 	})
 
 	.controller('HasDropdownController', function ($window, $scope, $q, $timeout, $element, $attrs, $fd, $animate) {
@@ -399,7 +401,7 @@ angular
 
 				element.on('click', onClick);
 			}
-		}
+		};
 	})
 
 	.directive('dropdown', function () {

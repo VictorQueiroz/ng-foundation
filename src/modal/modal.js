@@ -1,3 +1,5 @@
+'use strict';
+
 angular
 	.module('ngFoundation.modal', ['ngAnimate', 'ngSanitize'])
 

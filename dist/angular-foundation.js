@@ -17,10 +17,10 @@ angular
 	.factory('$position', ["$fd", function ($fd) {
 		var $position = {};
 
-		$position.base = function (element, parent) {
+		$position.base = function (element, target) {
 			var o_p = element.offsetParent(),
 					o = o_p.offset(),
-					position = parent.offset();
+					position = target.offset();
 
 			position.top -= o.top;
 			position.left -= o.left;
@@ -28,65 +28,28 @@ angular
 			return position;
 		};
 
-		$position.adjustPip = function (element, parent, configs, position) {
-			var sheet = $fd.stylesheet,
-			pipOffsetBase = 8,
-			ruleIdx = $position.ruleIdx;
-
-			if(element.hasClass(configs.megaClass)) {
-				pipOffsetBase = position.left + (parent.outerWidth() / 2) - 8;
-			} else if ($fd.small() && !$fd.medium()) {
-				pipOffsetBase += position.left - 8;
-			}
-
-			ruleIdx = sheet.cssRules.length;
-
-			var selBefore = '.f-dropdown.open:before',
-					selAfter = '.f-dropdown.open:after',
-					cssBefore = 'left: ' + pipOffsetBase + 'px;';
-					cssAfter = 'left: ' + (pipOffsetBase - 1) + 'px;';
-
-			if(sheet.insertRule) {
-				sheet.insertRule([selBefore, '{', cssBefore ,'}'].join(' '), ruleIdx);
-				sheet.insertRule([selAfter, '{', cssAfter ,'}'].join(' '), ruleIdx + 1);
-			} else {
-				sheet.addRule(selBefore, cssBefore, ruleIdx);
-				sheet.addRule(selAfter, cssAfter, ruleIdx + 1);
-			}
-		};
-
 		$position.directions = {
-			bottom: function (element, parent, configs) {
-				var position = $position.base(element, parent);
-
-				if (parent.outerWidth() < element.outerWidth() || ($fd.small() && !$fd.medium()) || element.hasClass(configs.mega_menu)) {
-					$position.adjustPip(element, parent, configs, position);
-				}
+			bottom: function (element, target, options) {
+				var position = $position.base(element, target);
 
 				if ($fd.rtl) {
 					return {
-						left: position.left - this.outerWidth() + parent.outerWidth(),
-						top: position.top + parent.outerHeight()
+						left: position.left - this.outerWidth() + target.outerWidth(),
+						top: position.top + target.outerHeight()
 					};
 				}
 
 				return {
 					left: position.left,
-					top: position.top + parent.outerHeight()
+					top: position.top + target.outerHeight()
 				};
 			},
-			top: function (element, parent, configs) {
-				var position = $position.base(element, parent);
-
-				element.addClass('drop-top');
-
-				if (parent.outerWidth() < element.outerWidth() || ($fd.small() && !$fd.medium()) || element.hasClass(configs.megaClass)) {
-					$position.adjustPip(element, parent, configs, position);
-				}
+			top: function (element, target, options) {
+				var position = $position.base(element, target);
 
 				if ($fd.rtl) {
 					return {
-						left: position.left - element.outerWidth() + parent.outerWidth(),
+						left: position.left - element.outerWidth() + target.outerWidth(),
 						top: position.top - element.outerHeight()
 					};
 				}
@@ -96,34 +59,22 @@ angular
 					top: position.top - element.outerHeight()
 				};
 			},
-			left: function (element, parent, configs) {
-				var position = $position.base(element, parent);
-
-				element.addClass('drop-left');
+			left: function (element, target, options) {
+				var position = $position.base(element, target);
 
 				return {
 					left: position.left - element.outerWidth(),
 					top: position.top
 				};
 			},
-			right: function (element, parent, configs) {
-				var position = $position.base(element, parent);
-
-				element.addClass('drop-right');
+			right: function (element, target, options) {
+				var position = $position.base(element, target);
 
 				return {
-					left: position.left + parent.outerWidth(),
+					left: position.left + target.outerWidth(),
 					top: position.top
 				};
 			}
-		};
-
-		$position.style = function (element, parent, configs) {
-			var css = angular.extend({
-				position: 'absolute'
-			}, $position.directions[configs.align](element, parent, configs));
-
-			element.attr('style', '').css(css);
 		};
 
 		$position.clearIdx = function () {
@@ -136,48 +87,6 @@ angular
 			}
 		};
 
-		/**
-		 * Apply the DOM element position based on parent position.
-		 */
-		$position.applyPosition = function (element, parent, configs) {
-			var leftOffset = Math.max((parent.width() - element.width()) / 2, 8);
-
-			$position.clearIdx();
-
-			if(configs.align === 'left' || configs.align === 'right') {
-				element.removeClass('open') && parent.removeClass('open');
-			}
-
-			if ($fd.small() && !$fd.medium()) {
-				var position = $position.directions.bottom(element, parent, configs);
-
-				element
-					.attr('style', '')
-					.removeClass('drop-left drop-right drop-top').css({
-						position : 'absolute',
-						width: '95%',
-						'max-width': 'none',
-						top: position.top
-					});
-
-				element.css($fd.rtl ? 'right' : 'left', leftOffset);
-
-				if(configs.align === 'left' || configs.align === 'right') {
-					element.addClass('open') && parent.addClass('open');
-				}
-			} else {
-				$position.style(element, parent, configs);
-			}
-
-			if(configs.align === 'top' || configs.align === 'bottom') {
-				element.addClass('open') && parent.addClass('open');
-			}
-
-			element.focus();
-
-			return element;
-		};
-
 		return $position;
 	}])
 
@@ -188,43 +97,205 @@ angular
 			templateUrl: 'dropdown/dropdown.tpl.html',
 			align: 'bottom',
 			name: 'dropdown',
-			megaClass: 'mega'
+			megaClass: 'mega',
+			animation: 'am-flip-x'
 		};
 
-		this.$get = ["$tooltip", "$position", "$document", "$rootScope", function ($tooltip, $position, $document, $rootScope) {
+		this.$get = ["$position", "$fd", "$document", "$q", "$timeout", "$templateCache", "$compile", "$rootScope", "$animate", function ($position, $fd, $document, $q, $timeout, $templateCache, $compile, $rootScope, $animate) {
 			$document = angular.element($document);
 
-			function DropdownFactory ($parent, options) {
-				var $dropdown = {}, $scope, $parent, $element;
+			function DropdownFactory ($target, options) {
+				var $dropdown = {}, $scope, $target, $element;
 
-				$dropdown.$options = angular.extend({}, $dropdownProvider.defaults, options);
-				$dropdown = $tooltip($parent, $dropdown.$options);
-				$element = $dropdown.$element;
-				$parent = $dropdown.$parent;
-
-				function onBodyClick (event) {
-					if(event.target === $dropdown.$parent[0]) return;
-					return event.target !== $dropdown.$parent[0] && $dropdown.$leave();
-				}
+				options = $dropdown.$options = angular.extend({}, $dropdownProvider.defaults, options);
+				$dropdown.$options.$scope = $scope = options.$scope || $rootScope.$new();
+				$dropdown.$target = $target;
+				$dropdown.$element = $element = null;
+				$dropdown.$isShown = false;
 
 				angular.forEach(['content', 'items'], function (key) {
 					if(angular.isDefined(options[key])) $dropdown.$scope[key] = options[key];
 				});
 
-				$dropdown.applyPosition = $position.applyPosition;
+				$dropdown.$adjustPip = function (position) {
+					var sheet = $fd.stylesheet,
+					pipOffsetBase = 8,
+					ruleIdx = $position.ruleIdx;
 
-				$dropdown.leave = function ($dropdown) {
-					$dropdown.$parent.removeClass('open');
-					$dropdown.$element.removeClass('open');
+					if($element.hasClass(options.megaClass)) {
+						pipOffsetBase = position.left + ($target.outerWidth() / 2) - 8;
+					} else if ($fd.small() && !$fd.medium()) {
+						pipOffsetBase += position.left - 8;
+					}
+
+					ruleIdx = sheet.cssRules.length;
+
+					var selBefore = '.f-dropdown.open:before',
+							selAfter = '.f-dropdown.open:after',
+							cssBefore = 'left: ' + pipOffsetBase + 'px;';
+							cssAfter = 'left: ' + (pipOffsetBase - 1) + 'px;';
+
+					if(sheet.insertRule) {
+						sheet.insertRule([selBefore, '{', cssBefore ,'}'].join(' '), ruleIdx);
+						sheet.insertRule([selAfter, '{', cssAfter ,'}'].join(' '), ruleIdx + 1);
+					} else {
+						sheet.addRule(selBefore, cssBefore, ruleIdx);
+						sheet.addRule(selAfter, cssAfter, ruleIdx + 1);
+					}
 				};
 
-				$dropdown.$scope.$on('dropdown:show:after', function (event) {
-					$document.bind('click focus blur', onBodyClick);
-				});
+				$dropdown.applyPosition = function () {
+					if($scope.$emit('dropdown.position.before', $dropdown).defaultPrevented) {
+						return;
+					}
 
-				$dropdown.$scope.$on('dropdown:leave:after', function (event) {
+					$dropdown.$applyPosition();
+				};
+
+				$dropdown.$applyPosition = function () {
+					var leftOffset = Math.max(($target.width() - $element.width()) / 2, 8);
+					var position = $position.base($element, $target);
+
+					$position.clearIdx();
+
+					if(options.align === 'left' || options.align === 'right') {
+						$element.removeClass('open') && $target.removeClass('open');
+					}
+
+					if ($fd.small() && !$fd.medium()) {
+						position = $position.directions.bottom($element, $target, options);
+
+						$element
+							.attr('style', '')
+							.removeClass('drop-left drop-right drop-top').css({
+								position : 'absolute',
+								width: '95%',
+								'max-width': 'none',
+								top: position.top
+							});
+
+						$element.css($fd.rtl ? 'right' : 'left', leftOffset);
+
+						if(options.align === 'left' || options.align === 'right') {
+							$element.addClass('open') && $target.addClass('open');
+						}
+					} else {
+						setTimeout(function () {
+							var css = angular.extend({
+								position: 'absolute'
+							}, $position.directions[options.align]($element, $target, options));
+
+							$element.attr('style', '').css(css);
+
+							angular.forEach(['bottom', 'left', 'top', 'right'], function (align) {
+								if(align === options.align) {
+									$element.addClass('drop-' + align);
+								}
+							});
+						}, 100);
+					}
+
+					if ($target.outerWidth() < $element.outerWidth() || ($fd.small() && !$fd.medium()) || $element.hasClass(options.megaClass)) {
+						$dropdown.$adjustPip(position);
+					}
+
+					if(options.align === 'top' || options.align === 'bottom') {
+						$element.addClass('open') && $target.addClass('open');
+					}
+
+					$element.focus();
+
+					$scope.$emit('dropdown.position.after', $dropdown);
+				};
+
+				$dropdown.$getTemplate = function () {
+					return $q.when($templateCache.get(options.templateUrl));
+				};
+
+				$dropdown.$buildElement = function () {
+					return $compile($element)($scope);
+				};
+
+				$dropdown.$enter = function () {
+					var promise;
+
+					function onTemplateLoaded (template) {
+						$dropdown.$element = angular.element(template);
+						$element = $dropdown.$element;
+
+						$dropdown.$buildElement();
+
+						$element.addClass(options.animation);
+
+						promise = $animate.enter($element, $target, $target, onElementEnter);
+						if(promise && promise.then) promise.then(onElementEnter);
+
+						$dropdown.applyPosition();
+
+						$dropdown.$isShown = true;
+						$scope.$$phase || ($scope.$root && $scope.$root.$$phase) || $scope.$digest();
+
+						$document.bind('click focus blur', onBodyClick);
+
+						$scope.$emit('dropdown.enter.after', $dropdown);
+					}
+
+					$dropdown.$getTemplate().then(onTemplateLoaded);
+				};
+
+				$dropdown.$leave = function () {
+					var promise = $animate.leave($element, onElementLeave);
+					if(promise && promise.then) promise.then(onElementLeave);
+
+					$dropdown.$target.removeClass('open') && $dropdown.$element.removeClass('open');
+
+					$dropdown.$isShown = false;
+					$scope.$$phase || ($scope.$root && $scope.$root.$$phase) || $scope.$digest();
+
 					$document.unbind('click focus blur', onBodyClick);
-				});
+
+					$scope.$emit('dropdown.leave.after', $dropdown);
+				};
+
+				$dropdown.enter = function () {
+					if($dropdown.$isShown) return;
+
+					if($scope.$emit('dropdown.enter.before', $dropdown).defaultPrevented) {
+						return;
+					}
+
+					$timeout(function () {
+						$dropdown.$enter();
+					});
+				};
+
+				$dropdown.leave = function () {
+					if(!$dropdown.$isShown) return;
+
+					if($scope.$emit('dropdown.leave.before', $dropdown).defaultPrevented) {
+						return;
+					}
+
+					$timeout(function () {
+						$dropdown.$leave();
+					});
+				};
+
+				$dropdown.toggle = function () {
+					$dropdown.$isShown ? $dropdown.leave() : $dropdown.enter();
+				};
+
+				function onBodyClick (event) {
+					if(event.target !== $dropdown.$target[0]) {
+						$dropdown.leave();
+					}
+				}
+
+				function onElementLeave () {
+				}
+
+				function onElementEnter () {
+				}
 
 				return $dropdown;
 			}
@@ -233,7 +304,9 @@ angular
 		}];
 	})
 
-	.directive('fdDropdown', ["$dropdown", function ($dropdown) {
+	.directive('fdDropdown', ["$dropdown", "$window", function ($dropdown, $window) {
+		$window = angular.element($window);
+
 		return {
 			restrict: 'A',
 			scope: true,
@@ -247,6 +320,9 @@ angular
 				});
 
 				var dropdown = $dropdown(element, options);
+
+				element.on('click', dropdown.toggle);
+				$window.on('resize', dropdown.applyPosition);
 			}
 		};
 	}]);
@@ -410,6 +486,8 @@ angular
 			return new $FdFactory;
 		}];
 	})
+'use strict';
+
 angular
 	.module('ngFoundation.modal', ['ngAnimate', 'ngSanitize'])
 
@@ -629,6 +707,8 @@ angular
 			}
 		};
 	}]);
+'use strict';
+
 angular
 	.module('ngFoundation.rangeSlider', [])
 
@@ -838,6 +918,8 @@ angular
 			}
 		};
 	});
+'use strict';
+
 angular
 	.module('ngFoundation.tabs', [])
 
@@ -898,6 +980,8 @@ angular
 			}
 		};
 	});
+'use strict';
+
 angular
 	.module('ngFoundation.tooltip', ['ngAnimate', 'ngSanitize'])
 
@@ -905,141 +989,20 @@ angular
 		var $tooltipProvider = this;
 
 		this.defaults = {
-			name: 'tooltip',
-			delay: {
-				show: 0
-			}
+			name: 'tooltip'
 		};
 
-		this.$get = ["$animate", "$rootScope", "$q", "$timeout", "$templateCache", "$compile", "$window", function ($animate, $rootScope, $q, $timeout, $templateCache, $compile, $window) {
-			function TooltipFactory ($parent, options) {
-				var $tooltip = {}, $element, $scope, timeout;
-
-				options = $tooltip.$options = angular.extend({}, $tooltipProvider.defaults, options);
-				$tooltip.$scope = $scope = $tooltip.$options.$scope && $tooltip.$options.$scope.$new() || $rootScope.$new();
-				$tooltip.$parent = $parent;
-				$tooltip.$element = $element = null;
-				$tooltip.$isShown = false;
-
-				$tooltip.applyPosition = function () {};
-				$tooltip.$applyPosition = function () {
-					$tooltip.getElement().then(function ($element) {
-						$tooltip.getParent().then(function ($parent) {
-							$tooltip.applyPosition($element, $parent, $tooltip.$options);
-						});
-					});
-				}
-
-				$tooltip.onResize = function () {
-					if($tooltip.$isShown) {
-						$tooltip.$applyPosition();
-					}
-				};
-
-				$tooltip.destroy = function ($element, $parent) {
-					$parent.off('click', $tooltip.$toggle);
-
-					if($element) {
-						$element.leave();
-						$element.remove();
-						$element = null;
-					}
-
-					clearTimeout(timeout);
-
-					$tooltip.$scope.$destroy();
-				};
-
-				$tooltip.$destroy = function () {
-					$tooltip.destroy($element, $parent);
-				};
-
-				$tooltip.getElement = function () {
-					var deferred = $q.defer();
-					$timeout(function () {
-						deferred.resolve($tooltip.$element);
-					}, options.delay.show);
-					return deferred.promise;
-				};
-
-				$tooltip.getParent = function () {
-					var deferred = $q.defer();
-					$timeout(function () {
-						deferred.resolve($tooltip.$parent);
-					}, options.delay.show);
-					return deferred.promise;
-				};
-
-				$tooltip.$onElementLoaded = function () {
-					$tooltip.$scope.$emit(options.name + ':show:after', $tooltip);
-				};
-
-				$tooltip.$enter = function (event) {
-					clearTimeout(timeout);
-
-					function onTemplateLoaded (template) {
-						$element = angular.element(template);
-						$element = $tooltip.$element = $compile($element)($scope);
-						$animate.enter($element, $parent, $parent, $tooltip.$onElementLoaded);
-						$tooltip.$isShown = true;
-						$scope.$$phase || ($scope.$root && $scope.$root.$$phase) || scope.$digest();
-
-						$tooltip.$applyPosition();
-					}
-
-					function enter () {
-						$scope.$emit(options.name + ':show:before', $tooltip);
-
-						$tooltip.getTemplate().then(onTemplateLoaded);
-					}
-
-					timeout = setTimeout(function () {
-						enter();
-					}, options.delay.show);
-				};
-
-				$tooltip.leave = function ($tooltip) {};
-				$tooltip.$leave = function (event) {
-					$tooltip.$element.remove();
-					$tooltip.$isShown = false;
-
-					$scope.$emit(options.name + ':leave:after', $tooltip);
-
-					$tooltip.leave($tooltip);
-				};
-
-				$tooltip.$toggle = function (event) {
-					!$tooltip.$isShown ? $tooltip.$enter(event) : $tooltip.$leave(event);
-				};
-
-				$tooltip.getTemplate = function () {
-					return $q.when($templateCache.get(options.templateUrl));
-				};
-
-				// scope
-				$scope.$enter = function () {
-					$scope.$$postDigest(function () {
-						$tooltip.enter();
-					});
-				};
-
-				$scope.$leave = function () {
-					$scope.$emit(options.name + ':leave:before', $tooltip);
-
-					$scope.$$postDigest(function () {
-						$tooltip.leave();
-					});
-				};
-
-				$tooltip.$parent.on('click', $tooltip.$toggle);
-				angular.element($window).on('resize', $tooltip.onResize);
-
+		this.$get = ["$animate", "$rootScope", "$q", "$fd", "$timeout", "$position", "$templateCache", "$compile", "$window", function ($animate, $rootScope, $q, $fd, $timeout, $position, $templateCache, $compile, $window) {
+			function TooltipFactory ($target, options) {
+				var $tooltip = {};
 				return $tooltip;
 			}
 
 			return TooltipFactory;
 		}];
 	});
+'use strict';
+
 angular
 	.module('ngFoundation.topbar', [])
 
@@ -1243,7 +1206,7 @@ angular
 				section.$setTopBar(topBar);
 				topBar.$setSection(section);
 			}
-		}
+		};
 	})
 
 	.controller('HasDropdownController', ["$window", "$scope", "$q", "$timeout", "$element", "$attrs", "$fd", "$animate", function ($window, $scope, $q, $timeout, $element, $attrs, $fd, $animate) {
@@ -1441,7 +1404,7 @@ angular
 
 				element.on('click', onClick);
 			}
-		}
+		};
 	})
 
 	.directive('dropdown', function () {
