@@ -15,6 +15,18 @@ angular
 			'foundation-data-attribute-namespace'
 		];
 
+		// add header helpers
+		var head, i = this.headerHelpers.length;
+
+		head = document.getElementsByTagName('head')[0];
+		head = angular.element(head);
+
+		while(i--) {
+			if(head.has('.' + this.headerHelpers[i]).length === 0) {
+				head.append('<meta class="' + this.headerHelpers[i] + '">');
+			}
+		}
+
 		this.namespace = 'my-namespace';
 
 		this.stylesheet = angular.element('<style></style>').appendTo('head')[0].sheet;
@@ -58,18 +70,6 @@ angular
         $fdProvider.mediaQueries[media] = $fdProvider.removeQuotes(angular.element('.' + mediaClass).css('font-family'));
       }
 		};
-
-		// add header helpers
-		var head, i = this.headerHelpers.length;
-
-		head = document.getElementsByTagName('head')[0];
-		head = angular.element(head);
-
-		while(i--) {
-			if(head.has('.' + this.headerHelpers[i]).length === 0) {
-				head.append('<meta class="' + this.headerHelpers[i] + '">');
-			}
-		}
 
 		this.$get = function ($window) {
 			function $FdFactory () {
