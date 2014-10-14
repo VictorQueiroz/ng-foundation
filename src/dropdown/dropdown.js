@@ -44,23 +44,23 @@ angular
 
 		$position.directions = {
 			bottom: function (element, parent, configs) {
-        var position = $position.base(element, parent);
+				var position = $position.base(element, parent);
 
-        if (parent.outerWidth() < element.outerWidth() || ($fd.small() && !$fd.medium()) || element.hasClass(configs.mega_menu)) {
-          $position.adjustPip(element, parent, configs, position);
-        }
+				if (parent.outerWidth() < element.outerWidth() || ($fd.small() && !$fd.medium()) || element.hasClass(configs.mega_menu)) {
+					$position.adjustPip(element, parent, configs, position);
+				}
 
-        if ($fd.rtl) {
-          return {
-          	left: position.left - this.outerWidth() + parent.outerWidth(),
-          	top: position.top + parent.outerHeight()
-          };
-        }
+				if ($fd.rtl) {
+					return {
+						left: position.left - this.outerWidth() + parent.outerWidth(),
+						top: position.top + parent.outerHeight()
+					};
+				}
 
-        return {
-        	left: position.left,
-        	top: position.top + parent.outerHeight()
-        };
+				return {
+					left: position.left,
+					top: position.top + parent.outerHeight()
+				};
 			},
 			top: function (element, parent, configs) {
 				var position = $position.base(element, parent);
@@ -83,26 +83,26 @@ angular
 					top: position.top - element.outerHeight()
 				};
 			},
-      left: function (element, parent, configs) {
-        var position = $position.base(element, parent);
+			left: function (element, parent, configs) {
+				var position = $position.base(element, parent);
 
-        element.addClass('drop-left');
+				element.addClass('drop-left');
 
-        return {
-        	left: position.left - element.outerWidth(),
-        	top: position.top
-        };
-      },
-      right: function (element, parent, configs) {
-        var position = $position.base(element, parent);
+				return {
+					left: position.left - element.outerWidth(),
+					top: position.top
+				};
+			},
+			right: function (element, parent, configs) {
+				var position = $position.base(element, parent);
 
-        element.addClass('drop-right');
+				element.addClass('drop-right');
 
-        return {
-        	left: position.left + parent.outerWidth(),
-        	top: position.top
-       	};
-      }
+				return {
+					left: position.left + parent.outerWidth(),
+					top: position.top
+				};
+			}
 		};
 
 		$position.style = function (element, parent, configs) {
@@ -127,43 +127,42 @@ angular
 		 * Apply the DOM element position based on parent position.
 		 */
 		$position.applyPosition = function (element, parent, configs) {
-      var leftOffset = Math.max((parent.width() - element.width()) / 2, 8);
+			var leftOffset = Math.max((parent.width() - element.width()) / 2, 8);
 
-      $position.clearIdx();
+			$position.clearIdx();
 
-      if(configs.align === 'left' || configs.align === 'right') {
-      	element.removeClass('open');
-      	parent.removeClass('open');
-      }
+			if(configs.align === 'left' || configs.align === 'right') {
+				element.removeClass('open') && parent.removeClass('open');
+			}
 
-      if ($fd.small() && !$fd.medium()) {
-        var position = $position.directions.bottom(element, parent, configs);
+			if ($fd.small() && !$fd.medium()) {
+				var position = $position.directions.bottom(element, parent, configs);
 
-        element.attr('style', '').removeClass('drop-left drop-right drop-top').css({
-          position : 'absolute',
-          width: '95%',
-          'max-width': 'none',
-          top: position.top
-        });
+				element
+					.attr('style', '')
+					.removeClass('drop-left drop-right drop-top').css({
+						position : 'absolute',
+						width: '95%',
+						'max-width': 'none',
+						top: position.top
+					});
 
-        element.css($fd.rtl ? 'right' : 'left', leftOffset);
+				element.css($fd.rtl ? 'right' : 'left', leftOffset);
 
-	      if(configs.align === 'left' || configs.align === 'right') {
-	      	element.addClass('open');
-	      	parent.addClass('open');
-	      }
-      } else {
-        $position.style(element, parent, configs);
-      }
+				if(configs.align === 'left' || configs.align === 'right') {
+					element.addClass('open') && parent.addClass('open');
+				}
+			} else {
+				$position.style(element, parent, configs);
+			}
 
-      if(configs.align === 'top' || configs.align === 'bottom') {
-      	element.addClass('open');
-      	parent.addClass('open');
-      }
+			if(configs.align === 'top' || configs.align === 'bottom') {
+				element.addClass('open') && parent.addClass('open');
+			}
 
-      element.focus();
+			element.focus();
 
-      return element;
+			return element;
 		};
 
 		return $position;
