@@ -88,8 +88,9 @@ angular
 			animation: 'am-flip-x'
 		};
 
-		this.$get = function ($position, $fd, $document, $q, $timeout, $templateCache, $compile, $rootScope, $animate) {
+		this.$get = function ($position, $fd, $document, $window, $q, $timeout, $templateCache, $compile, $rootScope, $animate) {
 			$document = angular.element($document);
+			$window = angular.element($window);
 
 			function DropdownFactory ($target, options) {
 				var $dropdown = {}, $scope, $target, $element;
@@ -103,6 +104,22 @@ angular
 				angular.forEach(['content', 'items'], function (key) {
 					if(angular.isDefined(options[key])) $dropdown.$scope[key] = options[key];
 				});
+
+				function onBodyClick (event) {
+					if(event.target !== $dropdown.$target[0]) {
+						$dropdown.leave();
+					}
+				}
+
+				function onElementLeave () {
+				}
+
+				function onElementEnter () {
+				}
+
+				function onResize (event) {
+					$dropdown.applyPosition();
+				}
 
 				$dropdown.$adjustPip = function (position) {
 					var sheet = $fd.stylesheet,
@@ -223,6 +240,7 @@ angular
 						$scope.$$phase || ($scope.$root && $scope.$root.$$phase) || $scope.$digest();
 
 						$document.bind('click focus blur', onBodyClick);
+						$window.on('resize', onResize);
 
 						$scope.$emit('dropdown.enter.after', $dropdown);
 					}
@@ -240,6 +258,7 @@ angular
 					$scope.$$phase || ($scope.$root && $scope.$root.$$phase) || $scope.$digest();
 
 					$document.unbind('click focus blur', onBodyClick);
+					$window.off('resize', onResize);
 
 					$scope.$emit('dropdown.leave.after', $dropdown);
 				};
@@ -272,18 +291,6 @@ angular
 					$dropdown.$isShown ? $dropdown.leave() : $dropdown.enter();
 				};
 
-				function onBodyClick (event) {
-					if(event.target !== $dropdown.$target[0]) {
-						$dropdown.leave();
-					}
-				}
-
-				function onElementLeave () {
-				}
-
-				function onElementEnter () {
-				}
-
 				return $dropdown;
 			}
 
@@ -291,9 +298,7 @@ angular
 		};
 	})
 
-	.directive('fdDropdown', function ($dropdown, $window) {
-		$window = angular.element($window);
-
+	.directive('fdDropdown', function ($dropdown) {
 		return {
 			restrict: 'A',
 			scope: true,
@@ -309,7 +314,6 @@ angular
 				var dropdown = $dropdown(element, options);
 
 				element.on('click', dropdown.toggle);
-				$window.on('resize', dropdown.applyPosition);
 			}
 		};
 	});

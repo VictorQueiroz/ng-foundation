@@ -43,6 +43,10 @@ angular
 					}
 				}
 
+				function onResize (event) {
+					$modal.applyPosition();
+				}
+
 				function onBackgroundClick () {
 					$modal.leave();
 				}
@@ -111,6 +115,8 @@ angular
 						$modal.$bg.on('click', onBackgroundClick);
 					}
 
+					$window.off('resize', onResize);
+
 					$scope.$emit('modal.bind.after', $modal);
 				};
 
@@ -175,6 +181,8 @@ angular
 						var promise = $animate.enter($modal.$element, element, element, onElementEnter);
 						if(promise && promise.then) promise.then(onElementEnter);
 
+						$window.on('resize', onResize);
+
 						$scope.$emit('modal.enter.after', $modal);
 					}
 
@@ -192,8 +200,6 @@ angular
 				$scope.$hide = function () {
 					$modal.leave();
 				};
-
-				$window.on('resize', $modal.applyPosition);
 
 				return $modal;
 			}
