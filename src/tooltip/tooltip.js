@@ -59,13 +59,13 @@ angular
 					$tooltip.applyPosition();
 				};
 
-				$tooltip.$buildElement = function () {
+				$tooltip.$compileElement = function () {
 					return $compile($element)($scope);
 				};
 
 				$tooltip.$onTemplateLoaded = function (template) {
 					$tooltip.$element = $element = angular.element(template);
-					$tooltip.$buildElement();
+					$tooltip.$compileElement();
 
 					$element.addClass(options.animation);
 

@@ -12,10 +12,7 @@ angular
 			animation: 'am-flip-x'
 		};
 
-		this.$get = function ($position, $fd, $tooltip, $document, $window, $q, $timeout, $templateCache, $compile, $rootScope, $animate) {
-			$document = angular.element($document);
-			$window = angular.element($window);
-
+		this.$get = function ($position, $fd, $tooltip) {
 			function DropdownFactory ($target, options) {
 				var $dropdown = {}, $scope;
 

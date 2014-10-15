@@ -1,3 +1,5 @@
+'use strict';
+
 angular
 	.module('ngFoundation', [
 		'ngFoundation.foundation',
@@ -6,7 +8,9 @@ angular
 		'ngFoundation.tooltip',
 		'ngFoundation.tabs',
 		'ngFoundation.topbar',
+		'ngFoundation.alert',
 		'ngFoundation.modal',
+		'ngFoundation.typeahead',
 		'ngFoundation.rangeSlider',
 		'ngFoundation.templates'
 	]);

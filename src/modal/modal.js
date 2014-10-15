@@ -7,6 +7,7 @@ angular
 		var $modalProvider = this;
 
 		this.defaults = {
+			name: 'modal',
 			templateUrl: 'modal/modal.tpl.html',
 			animation: 'am-flip-x',
 			closeOnBackgroundClick: true,
@@ -51,9 +52,7 @@ angular
 					$modal.leave();
 				};
 
-				$modal.$onElementEnter = function () {
-					$modal.applyPosition();
-				};
+				$modal.$onElementEnter = function () {};
 
 				$modal.$onBackgroundEnter = function () {};
 
@@ -61,9 +60,13 @@ angular
 
 				$modal.$onElementLeave = function () {};
 
+				$modal.$compileElement = function () {
+					return $compile($modal.$element)($scope);
+				};
+
 				$modal.$onTemplateLoaded = function (template) {
 					$modal.$element = $element = angular.element(template);
-					$compile($modal.$element)($scope);
+					$modal.$compileElement();
 
 					if(options.backdrop) {
 						$modal.$bg = $bg = angular.element('<div class="' + $modal.$options.bgClass + '"></div>');
@@ -90,9 +93,11 @@ angular
 					var promise = $animate.enter($modal.$element, $target, $target, $modal.$onElementEnter);
 					if(promise && promise.then) promise.then($modal.$onElementEnter);
 
+					$modal.applyPosition();
+
 					$window.on('resize', $modal.$onResize);
 
-					$scope.$emit('modal.enter.after', $modal);
+					$scope.$emit(options.name + '.enter.after', $modal);
 				};
 
 				$modal.$getTemplate = function () {
@@ -117,11 +122,11 @@ angular
 					$modal.$isShown = true;
 					$scope.$$phase || ($scope.$root && $scope.$root.$$phase) || $scope.$digest();
 
-					$scope.$emit('modal.positioning.after', $modal);
+					$scope.$emit(options.name + '.positioning.after', $modal);
 				};
 
 				$modal.$unbindEvents = function () {
-					if($scope.$emit('modal.unbind.before', $modal).defaultPrevented) {
+					if($scope.$emit(options.name + '.unbind.before', $modal).defaultPrevented) {
 						return;
 					}
 
@@ -133,11 +138,11 @@ angular
 						$modal.$bg.off('click', $modal.$onBackgroundClick);
 					}
 
-					$scope.$emit('modal.unbind.after', $modal);
+					$scope.$emit(options.name + '.unbind.after', $modal);
 				};
 
 				$modal.$bindEvents = function () {
-					if($scope.$emit('modal.bind.before', $modal).defaultPrevented) {
+					if($scope.$emit(options.name + '.bind.before', $modal).defaultPrevented) {
 						return;
 					}
 
@@ -151,16 +156,10 @@ angular
 
 					$window.off('resize', $modal.$onResize);
 
-					$scope.$emit('modal.bind.after', $modal);
+					$scope.$emit(options.name + '.bind.after', $modal);
 				};
 
 				$modal.$leave = function () {
-					if(!$modal.$isShown) return;
-
-					if($scope.$emit('modal.leave.before', $modal).defaultPrevented) {
-						return;
-					}
-
 					var promise = $animate.leave($modal.$element, $modal.$onElementLeave);
 					if(promise && promise.then) promise.then($modal.$onElementLeave);
 
@@ -173,16 +172,26 @@ angular
 					$scope.$$phase || ($scope.$root && $scope.$root.$$phase) || $scope.$digest();
 
 					$modal.$unbindEvents();
+
+					$scope.$emit(options.name + '.leave.after', $modal);
 				};
 
 				$modal.leave = function () {
-					$modal.$leave();
+					if(!$modal.$isShown) return;
+
+					if($scope.$emit(options.name + '.leave.before', $modal).defaultPrevented) {
+						return;
+					}
+
+					$timeout(function () {
+						$modal.$leave();
+					});
 				};
 
 				$modal.$enter = function () {
 					if($modal.$isShown) return;
 
-					if($scope.$emit('modal.enter.before', $modal).defaultPrevented) {
+					if($scope.$emit(options.name + '.enter.before', $modal).defaultPrevented) {
 						return;
 					}
 
@@ -190,7 +199,7 @@ angular
 				};
 
 				$modal.enter = function () {
-					if($scope.$emit('modal.enter.before', $modal).defaultPrevented) {
+					if($scope.$emit(options.name + '.enter.before', $modal).defaultPrevented) {
 						return;
 					}
 
@@ -198,11 +207,15 @@ angular
 				};
 
 				$modal.applyPosition = function () {
-					if($scope.$emit('modal.positioning.after', $modal).defaultPrevented) {
+					if($scope.$emit(options.name + '.positioning.after', $modal).defaultPrevented) {
 						return;
 					}
 
 					$modal.$applyPosition();
+				};
+
+				$modal.toggle = function () {
+					$modal.$isShown ? $modal.leave() : $modal.enter();
 				};
 
 				$scope.$show = function () {
