@@ -37,7 +37,7 @@ angular
 
 					var selBefore = '.f-dropdown.open:before',
 							selAfter = '.f-dropdown.open:after',
-							cssBefore = 'left: ' + pipOffsetBase + 'px;';
+							cssBefore = 'left: ' + pipOffsetBase + 'px;',
 							cssAfter = 'left: ' + (pipOffsetBase - 1) + 'px;';
 
 					if(sheet.insertRule) {

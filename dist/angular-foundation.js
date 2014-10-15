@@ -146,7 +146,7 @@ angular
 
 					var selBefore = '.f-dropdown.open:before',
 							selAfter = '.f-dropdown.open:after',
-							cssBefore = 'left: ' + pipOffsetBase + 'px;';
+							cssBefore = 'left: ' + pipOffsetBase + 'px;',
 							cssAfter = 'left: ' + (pipOffsetBase - 1) + 'px;';
 
 					if(sheet.insertRule) {
@@ -1045,7 +1045,7 @@ angular
 
 	.directive('rangeSlider', function () {
 		return {
-			templateUrl: 'rangeSlider/rangeSlider.tpl.html',
+			templateUrl: 'range-slider/range-slider.tpl.html',
 			require: '?ngModel',
 			controller: 'RangeSliderController',
 			link: function (scope, element, attrs, ngModel) {
@@ -1735,6 +1735,38 @@ angular
 angular
 	.module('ngFoundation.typeahead', [])
 
-	.directive('fdTypeahead', function () {
+	.provider('$typeahead', function () {
+		var $typeaheadProvider = this;
 
-	});
+		this.defaults = {
+			templateUrl: 'typeahead/typeahead.tpl.html',
+			align: 'bottom'
+		};
+
+		this.$get = ["$tooltip", function ($tooltip) {
+			function $TypeaheadFactory ($target, ngModel, options) {
+				var $typeahead = {};
+
+				options = $typeahead.$options = angular.extend({}, $typeaheadProvider.defaults, options);
+				$typeahead = $tooltip($target, options);
+
+				return $typeahead;
+			}
+
+			return $TypeaheadFactory;
+		}];
+	})
+
+	.directive('fdTypeahead', ["$parseOptions", "$typeahead", function ($parseOptions, $typeahead) {
+		return {
+			restrict: 'A',
+			require: '?ngModel',
+			link: function postLink (scope, element, attrs, ngModel) {
+				var options = {
+					$scope: scope
+				};
+
+				var typeahead = $typeahead(element, ngModel, options);
+			}
+		}
+	}]);

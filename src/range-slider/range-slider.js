@@ -174,7 +174,7 @@ angular
 
 	.directive('rangeSlider', function () {
 		return {
-			templateUrl: 'rangeSlider/rangeSlider.tpl.html',
+			templateUrl: 'range-slider/range-slider.tpl.html',
 			require: '?ngModel',
 			controller: 'RangeSliderController',
 			link: function (scope, element, attrs, ngModel) {
