@@ -198,40 +198,20 @@ angular
 			animation: 'am-flip-x'
 		};
 
-		this.$get = function ($position, $fd, $document, $window, $q, $timeout, $templateCache, $compile, $rootScope, $animate) {
+		this.$get = function ($position, $fd, $tooltip, $document, $window, $q, $timeout, $templateCache, $compile, $rootScope, $animate) {
 			$document = angular.element($document);
 			$window = angular.element($window);
 
 			function DropdownFactory ($target, options) {
-				var $dropdown = {}, $scope, $target, $element;
+				var $dropdown = {}, $scope;
 
 				options = $dropdown.$options = angular.extend({}, $dropdownProvider.defaults, options);
-				$dropdown.$options.$scope = $scope = options.$scope || $rootScope.$new();
-				$dropdown.$target = $target;
-				$dropdown.$element = $element = null;
-				$dropdown.$isShown = false;
-
-				angular.forEach(['content', 'items'], function (key) {
-					if(angular.isDefined(options[key])) $dropdown.$scope[key] = options[key];
-				});
-
-				function onBodyClick (event) {
-					if(event.target !== $dropdown.$target[0]) {
-						$dropdown.leave();
-					}
-				}
-
-				function onElementLeave () {
-				}
-
-				function onElementEnter () {
-				}
-
-				function onResize (event) {
-					$dropdown.applyPosition();
-				}
+				$dropdown = $tooltip($target, options);
+				$scope = options.$scope;
 
 				$dropdown.$adjustPip = function (position) {
+					var $element = $dropdown.$element;
+
 					var sheet = $fd.stylesheet,
 					pipOffsetBase = 8,
 					ruleIdx = $position.ruleIdx;
@@ -258,15 +238,10 @@ angular
 					}
 				};
 
-				$dropdown.applyPosition = function () {
-					if($scope.$emit('dropdown.position.before', $dropdown).defaultPrevented) {
-						return;
-					}
+				$scope.$on('dropdown.positioning.before', function (event, $tooltip) {
+					var $target = $tooltip.$target,
+					$element = $tooltip.$element;
 
-					$dropdown.$applyPosition();
-				};
-
-				$dropdown.$applyPosition = function () {
 					var leftOffset = Math.max(($target.width() - $element.width()) / 2, 8);
 					var position = $position.base($element, $target);
 
@@ -296,19 +271,17 @@ angular
 						}
 					} else {
 						// if it is not
-						setTimeout(function () {
-							var css = angular.extend({
-								position: 'absolute'
-							}, $position.directions[options.align]($element, $target, options));
+						var css = angular.extend({
+							position: 'absolute'
+						}, $position.directions[options.align]($element, $target, options));
 
-							$element.attr('style', '').css(css);
+						$element.attr('style', '').css(css);
 
-							angular.forEach(['bottom', 'left', 'top', 'right'], function (align) {
-								if(align === options.align) {
-									$element.addClass('drop-' + align);
-								}
-							});
-						}, 100);
+						angular.forEach(['bottom', 'left', 'top', 'right'], function (align) {
+							if(align === options.align) {
+								$element.addClass('drop-' + align);
+							}
+						});
 					}
 
 					if ($target.outerWidth() < $element.outerWidth() || ($fd.small() && !$fd.medium()) || $element.hasClass(options.megaClass)) {
@@ -320,88 +293,7 @@ angular
 					}
 
 					$element.focus();
-
-					$scope.$emit('dropdown.position.after', $dropdown);
-				};
-
-				$dropdown.$getTemplate = function () {
-					return $q.when($templateCache.get(options.templateUrl));
-				};
-
-				$dropdown.$buildElement = function () {
-					return $compile($element)($scope);
-				};
-
-				$dropdown.$enter = function () {
-					var promise;
-
-					function onTemplateLoaded (template) {
-						$dropdown.$element = angular.element(template);
-						$element = $dropdown.$element;
-
-						$dropdown.$buildElement();
-
-						$element.addClass(options.animation);
-
-						promise = $animate.enter($element, $target, $target, onElementEnter);
-						if(promise && promise.then) promise.then(onElementEnter);
-
-						$dropdown.applyPosition();
-
-						$dropdown.$isShown = true;
-						$scope.$$phase || ($scope.$root && $scope.$root.$$phase) || $scope.$digest();
-
-						$document.bind('click focus blur', onBodyClick);
-						$window.on('resize', onResize);
-
-						$scope.$emit('dropdown.enter.after', $dropdown);
-					}
-
-					$dropdown.$getTemplate().then(onTemplateLoaded);
-				};
-
-				$dropdown.$leave = function () {
-					var promise = $animate.leave($element, onElementLeave);
-					if(promise && promise.then) promise.then(onElementLeave);
-
-					$dropdown.$target.removeClass('open') && $dropdown.$element.removeClass('open');
-
-					$dropdown.$isShown = false;
-					$scope.$$phase || ($scope.$root && $scope.$root.$$phase) || $scope.$digest();
-
-					$document.unbind('click focus blur', onBodyClick);
-					$window.off('resize', onResize);
-
-					$scope.$emit('dropdown.leave.after', $dropdown);
-				};
-
-				$dropdown.enter = function () {
-					if($dropdown.$isShown) return;
-
-					if($scope.$emit('dropdown.enter.before', $dropdown).defaultPrevented) {
-						return;
-					}
-
-					$timeout(function () {
-						$dropdown.$enter();
-					});
-				};
-
-				$dropdown.leave = function () {
-					if(!$dropdown.$isShown) return;
-
-					if($scope.$emit('dropdown.leave.before', $dropdown).defaultPrevented) {
-						return;
-					}
-
-					$timeout(function () {
-						$dropdown.$leave();
-					});
-				};
-
-				$dropdown.toggle = function () {
-					$dropdown.$isShown ? $dropdown.leave() : $dropdown.enter();
-				};
+				});
 
 				return $dropdown;
 			}

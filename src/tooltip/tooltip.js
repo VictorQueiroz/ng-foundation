@@ -41,6 +41,8 @@ angular
 					}
 
 					$element.attr('style', '').css(css);
+
+					$scope.$emit(options.name + '.positioning.after', $tooltip);
 				};
 
 				$tooltip.$onElementLeave = function () {};
@@ -101,6 +103,10 @@ angular
 				};
 
 				$tooltip.applyPosition = function () {
+					if($scope.$emit(options.name + '.positioning.before', $tooltip).defaultPrevented) {
+						return;
+					}
+
 					$tooltip.$applyPosition();
 				};
 
