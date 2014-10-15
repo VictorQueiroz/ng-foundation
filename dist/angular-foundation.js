@@ -1,94 +1,114 @@
+'use strict';
+
 angular
 	.module('ngFoundation', [
 		'ngFoundation.foundation',
+		'ngFoundation.helpers',
 		'ngFoundation.dropdown',
 		'ngFoundation.tooltip',
 		'ngFoundation.tabs',
 		'ngFoundation.topbar',
+		'ngFoundation.alert',
 		'ngFoundation.modal',
+		'ngFoundation.typeahead',
 		'ngFoundation.rangeSlider',
 		'ngFoundation.templates'
 	]);
 
 angular.module('ngFoundation.templates', []);
 angular
+	.module('ngFoundation.alert', [])
+
+	.provider('$alert', function () {
+		var $alertProvider = this;
+
+		this.defaults = {
+			backdrop: false,
+			name: 'alert',
+			templateUrl: 'alert/alert.tpl.html',
+			animation: 'am-slide-bottom',
+			duration: 3,
+			type: 'alert'
+		};
+
+		this.$get = ["$modal", "$timeout", function ($modal, $timeout) {
+			function $AlertFactory ($target, options) {
+				var $alert = {}, $scope, $element;
+				options = $alert.$options = angular.extend({}, $alertProvider.defaults, options);
+				$alert = $modal($target, options);
+				$scope = options.$scope;
+
+				angular.forEach(['content'], function (key) {
+					if(angular.isDefined(options[key])) {
+						$scope['$' + key] = options[key];
+					}
+				});
+
+				$alert.$applyPosition = function () {
+					$element = $alert.$element;
+
+					var css = {
+						opacity: 1,
+						visibility: 'visible',
+						display: 'block',
+						bottom: '0%',
+						'z-index': 99999,
+						left: '5%',
+						width: '90%',
+						position: 'fixed',
+					};
+
+					var classes = '';
+
+					if(typeof options.type === 'string') {
+						classes = options.type;
+					} else if(typeof options.type === 'array') {
+						classes = classes.join(' ');
+					}
+
+					$element
+						.css(css)
+						.addClass(classes);
+
+					$alert.$bindEvents();
+
+					$alert.$isShown = true;
+					$scope.$$phase || ($scope.$root && $scope.$root.$$phase) || $scope.$digest();
+
+					if(options.duration) {
+						$timeout(function () {
+							$alert.leave();
+						}, options.duration * 1000);
+					}
+				};
+
+				return $alert;
+			}
+
+			return $AlertFactory;
+		}];
+	})
+
+	.directive('fdAlert', ["$alert", function ($alert) {
+		return {
+			restrict: 'A',
+			link: function (scope, element, attrs) {
+				var options = {
+					$scope: scope
+				};
+
+				angular.forEach(['content', 'type', 'animation', 'duration'], function (key) {
+					if(angular.isDefined(attrs[key])) options[key] = attrs[key];
+				});
+
+				var alert = $alert(element, options);
+
+				element.on('click', alert.toggle);
+			}
+		};
+	}]);
+angular
 	.module('ngFoundation.dropdown', [])
-
-	.factory('$position', ["$fd", function ($fd) {
-		var $position = {};
-
-		$position.base = function (element, target) {
-			var o_p = element.offsetParent(),
-					o = o_p.offset(),
-					position = target.offset();
-
-			position.top -= o.top;
-			position.left -= o.left;
-
-			return position;
-		};
-
-		$position.directions = {
-			bottom: function (element, target, options) {
-				var position = $position.base(element, target);
-
-				if ($fd.rtl) {
-					return {
-						left: position.left - this.outerWidth() + target.outerWidth(),
-						top: position.top + target.outerHeight()
-					};
-				}
-
-				return {
-					left: position.left,
-					top: position.top + target.outerHeight()
-				};
-			},
-			top: function (element, target, options) {
-				var position = $position.base(element, target);
-
-				if ($fd.rtl) {
-					return {
-						left: position.left - element.outerWidth() + target.outerWidth(),
-						top: position.top - element.outerHeight()
-					};
-				}
-
-				return {
-					left: position.left,
-					top: position.top - element.outerHeight()
-				};
-			},
-			left: function (element, target, options) {
-				var position = $position.base(element, target);
-
-				return {
-					left: position.left - element.outerWidth(),
-					top: position.top
-				};
-			},
-			right: function (element, target, options) {
-				var position = $position.base(element, target);
-
-				return {
-					left: position.left + target.outerWidth(),
-					top: position.top
-				};
-			}
-		};
-
-		$position.clearIdx = function () {
-			var sheet = $fd.sheet;
-
-			if($position.ruleIdx) {
-				sheet.deleteRule($position.ruleIdx);
-				sheet.deleteRule($position.ruleIdx);
-				delete $position.ruleIdx;
-			}
-		};
-
-		return $position;
-	}])
 
 	.provider('$dropdown', function () {
 		var $dropdownProvider = this;
@@ -101,40 +121,17 @@ angular
 			animation: 'am-flip-x'
 		};
 
-		this.$get = ["$position", "$fd", "$document", "$window", "$q", "$timeout", "$templateCache", "$compile", "$rootScope", "$animate", function ($position, $fd, $document, $window, $q, $timeout, $templateCache, $compile, $rootScope, $animate) {
-			$document = angular.element($document);
-			$window = angular.element($window);
-
+		this.$get = ["$position", "$fd", "$tooltip", function ($position, $fd, $tooltip) {
 			function DropdownFactory ($target, options) {
-				var $dropdown = {}, $scope, $target, $element;
+				var $dropdown = {}, $scope;
 
 				options = $dropdown.$options = angular.extend({}, $dropdownProvider.defaults, options);
-				$dropdown.$options.$scope = $scope = options.$scope || $rootScope.$new();
-				$dropdown.$target = $target;
-				$dropdown.$element = $element = null;
-				$dropdown.$isShown = false;
-
-				angular.forEach(['content', 'items'], function (key) {
-					if(angular.isDefined(options[key])) $dropdown.$scope[key] = options[key];
-				});
-
-				function onBodyClick (event) {
-					if(event.target !== $dropdown.$target[0]) {
-						$dropdown.leave();
-					}
-				}
-
-				function onElementLeave () {
-				}
-
-				function onElementEnter () {
-				}
-
-				function onResize (event) {
-					$dropdown.applyPosition();
-				}
+				$dropdown = $tooltip($target, options);
+				$scope = options.$scope;
 
 				$dropdown.$adjustPip = function (position) {
+					var $element = $dropdown.$element;
+
 					var sheet = $fd.stylesheet,
 					pipOffsetBase = 8,
 					ruleIdx = $position.ruleIdx;
@@ -161,15 +158,10 @@ angular
 					}
 				};
 
-				$dropdown.applyPosition = function () {
-					if($scope.$emit('dropdown.position.before', $dropdown).defaultPrevented) {
-						return;
-					}
+				$scope.$on('dropdown.positioning.before', function (event, $tooltip) {
+					var $target = $tooltip.$target,
+					$element = $tooltip.$element;
 
-					$dropdown.$applyPosition();
-				};
-
-				$dropdown.$applyPosition = function () {
 					var leftOffset = Math.max(($target.width() - $element.width()) / 2, 8);
 					var position = $position.base($element, $target);
 
@@ -179,6 +171,7 @@ angular
 						$element.removeClass('open') && $target.removeClass('open');
 					}
 
+					// if it is a mobile
 					if ($fd.small() && !$fd.medium()) {
 						position = $position.directions.bottom($element, $target, options);
 
@@ -197,19 +190,18 @@ angular
 							$element.addClass('open') && $target.addClass('open');
 						}
 					} else {
-						setTimeout(function () {
-							var css = angular.extend({
-								position: 'absolute'
-							}, $position.directions[options.align]($element, $target, options));
+						// if it is not
+						var css = angular.extend({
+							position: 'absolute'
+						}, $position.directions[options.align]($element, $target, options));
 
-							$element.attr('style', '').css(css);
+						$element.attr('style', '').css(css);
 
-							angular.forEach(['bottom', 'left', 'top', 'right'], function (align) {
-								if(align === options.align) {
-									$element.addClass('drop-' + align);
-								}
-							});
-						}, 100);
+						angular.forEach(['bottom', 'left', 'top', 'right'], function (align) {
+							if(align === options.align) {
+								$element.addClass('drop-' + align);
+							}
+						});
 					}
 
 					if ($target.outerWidth() < $element.outerWidth() || ($fd.small() && !$fd.medium()) || $element.hasClass(options.megaClass)) {
@@ -221,88 +213,7 @@ angular
 					}
 
 					$element.focus();
-
-					$scope.$emit('dropdown.position.after', $dropdown);
-				};
-
-				$dropdown.$getTemplate = function () {
-					return $q.when($templateCache.get(options.templateUrl));
-				};
-
-				$dropdown.$buildElement = function () {
-					return $compile($element)($scope);
-				};
-
-				$dropdown.$enter = function () {
-					var promise;
-
-					function onTemplateLoaded (template) {
-						$dropdown.$element = angular.element(template);
-						$element = $dropdown.$element;
-
-						$dropdown.$buildElement();
-
-						$element.addClass(options.animation);
-
-						promise = $animate.enter($element, $target, $target, onElementEnter);
-						if(promise && promise.then) promise.then(onElementEnter);
-
-						$dropdown.applyPosition();
-
-						$dropdown.$isShown = true;
-						$scope.$$phase || ($scope.$root && $scope.$root.$$phase) || $scope.$digest();
-
-						$document.bind('click focus blur', onBodyClick);
-						$window.on('resize', onResize);
-
-						$scope.$emit('dropdown.enter.after', $dropdown);
-					}
-
-					$dropdown.$getTemplate().then(onTemplateLoaded);
-				};
-
-				$dropdown.$leave = function () {
-					var promise = $animate.leave($element, onElementLeave);
-					if(promise && promise.then) promise.then(onElementLeave);
-
-					$dropdown.$target.removeClass('open') && $dropdown.$element.removeClass('open');
-
-					$dropdown.$isShown = false;
-					$scope.$$phase || ($scope.$root && $scope.$root.$$phase) || $scope.$digest();
-
-					$document.unbind('click focus blur', onBodyClick);
-					$window.off('resize', onResize);
-
-					$scope.$emit('dropdown.leave.after', $dropdown);
-				};
-
-				$dropdown.enter = function () {
-					if($dropdown.$isShown) return;
-
-					if($scope.$emit('dropdown.enter.before', $dropdown).defaultPrevented) {
-						return;
-					}
-
-					$timeout(function () {
-						$dropdown.$enter();
-					});
-				};
-
-				$dropdown.leave = function () {
-					if(!$dropdown.$isShown) return;
-
-					if($scope.$emit('dropdown.leave.before', $dropdown).defaultPrevented) {
-						return;
-					}
-
-					$timeout(function () {
-						$dropdown.$leave();
-					});
-				};
-
-				$dropdown.toggle = function () {
-					$dropdown.$isShown ? $dropdown.leave() : $dropdown.enter();
-				};
+				});
 
 				return $dropdown;
 			}
@@ -490,6 +401,222 @@ angular
 			return new $FdFactory;
 		}];
 	})
+angular
+	.module('ngFoundation.helpers', [
+		'ngFoundation.helpers.position',
+		'ngFoundation.helpers.parseOptions'
+	]);
+'use strict';
+
+angular
+	.module('ngFoundation.helpers.parseOptions', [])
+
+	.provider('$parseOptions', function () {
+  												//000011111111110000000000022222222220000000000000000000003333333333000000000000004444444444444440000000005555555555555550000000666666666666666000000000000000777777777700000000000000000008888888888
+  	var NG_OPTIONS_REGEXP = /^\s*([\s\S]+?)(?:\s+as\s+([\s\S]+?))?(?:\s+group\s+by\s+([\s\S]+?))?\s+for\s+(?:([\$\w][\$\w]*)|(?:\(\s*([\$\w][\$\w]*)\s*,\s*([\$\w][\$\w]*)\s*\)))\s+in\s+([\s\S]+?)(?:\s+track\s+by\s+([\s\S]+?))?$/,
+  	$parseOptionsProvider = this;
+
+  	this.defaults = {
+  		NG_OPTIONS_REGEXP: NG_OPTIONS_REGEXP
+  	};
+
+  	this.$get = ["$parse", "$q", function ($parse, $q) {
+  		function $ParseOptionsFactory () {
+  			var $parseOptions = {};
+  			return $parseOptions;
+  		}
+
+  		return $ParseOptionsFactory;
+  	}];
+	});
+angular
+	.module('ngFoundation.helpers.position', [])
+
+	.factory('$position', ["$fd", function ($fd) {
+		var $position = window.position = {};
+
+		/**
+		 * Test the element nodeName.
+		 */
+		var nodeName = $position.nodeName = function(element, name) {
+      return element.nodeName && element.nodeName.toLowerCase() === name.toLowerCase();
+    };
+
+		$position.getWindow = function (element) {
+			return element.nodeType === 9 && element.defaultView;
+		};
+
+		$position.css = function(element, prop, extra) {
+      var value;
+      if (element.currentStyle) { //IE
+        value = element.currentStyle[prop];
+      } else if (window.getComputedStyle) {
+        value = window.getComputedStyle(element)[prop];
+      } else {
+        value = element.style[prop];
+      }
+      return extra === true ? parseFloat(value) || 0 : value;
+    };
+
+		$position.offset = function (element) {
+			var offset = { top: 0, left: 0 };
+			var ownerDocument = element && element.ownerDocument;
+
+			if(!ownerDocument) return;
+
+			var documentElement = ownerDocument.documentElement;
+
+			if(element.getBoundingClientRect) {
+				offset = angular.extend(offset, element.getBoundingClientRect());
+			}
+
+			var w = $position.getWindow(ownerDocument);
+
+			return {
+				top: offset.top + w.pageYOffset - documentElement.clientTop,
+				left: offset.left + w.pageXOffset - documentElement.clientLeft
+			};
+		};
+
+		$position.height = function(element, outer) {
+      var value = element.offsetHeight;
+      if(outer) {
+        value += $position.css(element, 'marginTop', true) + $position.css(element, 'marginBottom', true);
+      } else {
+        value -= $position.css(element, 'paddingTop', true) + $position.css(element, 'paddingBottom', true) + $position.css(element, 'borderTopWidth', true) + $position.css(element, 'borderBottomWidth', true);
+      }
+      return value;
+    };
+
+		$position.width = function(element, outer) {
+      var value = element.offsetWidth;
+      if(outer) {
+        value += $position.css(element, 'marginLeft', true) + $position.css(element, 'marginRight', true);
+      } else {
+        value -= $position.css(element, 'paddingLeft', true) + $position.css(element, 'paddingRight', true) + $position.css(element, 'borderLeftWidth', true) + $position.css(element, 'borderRightWidth', true);
+      }
+      return value;
+    };
+
+		var offsetParent = $position.offsetParent = function (element) {
+			var ownerDocument = element.ownerDocument;
+			var offsetParent = element.offsetParent || ownerDocument;
+			if(nodeName(offsetParent, '#document')) return ownerDocument.documentElement;
+			while(offsetParent && !nodeName(offsetParent, 'html') && $position.css(offsetParent, 'position') === 'static') {
+				offsetParent = offsetParent.offsetParent;
+			}
+			return offsetParent || ownerDocument.documentElement;
+		};
+
+		$position.position = function(element) {
+      var offsetParentRect = {top: 0, left: 0},
+          offsetParentElement,
+          offset;
+
+      // Fixed elements are offset from window (parentOffset = {top:0, left: 0}, because it is it's only offset parent
+      if ($position.css(element, 'position') === 'fixed') {
+
+        // We assume that getBoundingClientRect is available when computed position is fixed
+        offset = element.getBoundingClientRect();
+
+      } else {
+
+        // Get *real* offsetParentElement
+        offsetParentElement = offsetParent(element);
+        offset = $position.offset(element);
+
+        // Get correct offsets
+        offset = $position.offset(element);
+        if (!nodeName(offsetParentElement, 'html')) {
+          offsetParentRect = $position.offset(offsetParentElement);
+        }
+
+        // Add offsetParent borders
+        offsetParentRect.top += $position.css(offsetParentElement, 'borderTopWidth', true);
+        offsetParentRect.left += $position.css(offsetParentElement, 'borderLeftWidth', true);
+      }
+
+      // Subtract parent offsets and element margins
+      return {
+        width: element.offsetWidth,
+        height: element.offsetHeight,
+        top: offset.top - offsetParentRect.top - $position.css(element, 'marginTop', true),
+        left: offset.left - offsetParentRect.left - $position.css(element, 'marginLeft', true)
+      };
+    };
+
+		$position.base = function (element, target) {
+			var o_p = $position.offsetParent(element[0]),
+					o = $position.offset(o_p),
+					position = $position.offset(target[0]);
+
+			position.top -= o.top;
+			position.left -= o.left;
+
+			return position;
+		};
+
+		$position.directions = {
+			bottom: function (element, target) {
+				var position = $position.base(element, target);
+
+				if ($fd.rtl) {
+					return {
+						left: position.left - element.outerWidth() + target.outerWidth(),
+						top: position.top + target.outerHeight()
+					};
+				}
+
+				return {
+					left: position.left,
+					top: position.top + target.outerHeight()
+				};
+			},
+			top: function (element, target) {
+				var position = $position.base(element, target);
+
+				if ($fd.rtl) {
+					return {
+						left: position.left - element.outerWidth() + target.outerWidth(),
+						top: position.top - element.outerHeight()
+					};
+				}
+
+				return {
+					left: position.left,
+					top: position.top - element.outerHeight()
+				};
+			},
+			left: function (element, target) {
+				var position = $position.base(element, target);
+
+				return {
+					left: position.left - element.outerWidth(),
+					top: position.top
+				};
+			},
+			right: function (element, target) {
+				var position = $position.base(element, target);
+
+				return {
+					left: position.left + target.outerWidth(),
+					top: position.top
+				};
+			}
+		};
+
+		$position.clearIdx = function () {
+			var sheet = $fd.sheet;
+
+			if($position.ruleIdx) {
+				sheet.deleteRule($position.ruleIdx);
+				sheet.deleteRule($position.ruleIdx);
+				delete $position.ruleIdx;
+			}
+		};
+
+		return $position;
+	}]);
 'use strict';
 
 angular
@@ -499,6 +626,7 @@ angular
 		var $modalProvider = this;
 
 		this.defaults = {
+			name: 'modal',
 			templateUrl: 'modal/modal.tpl.html',
 			animation: 'am-flip-x',
 			closeOnBackgroundClick: true,
@@ -514,8 +642,8 @@ angular
 			var body = angular.element($document.body);
 			$document = angular.element($document);
 
-			function $ModalFactory (element, options) {
-				var $modal = {}, $scope;
+			function $ModalFactory ($target, options) {
+				var $modal = {}, $scope, $element, $bg;
 
 				options = $modal.$options = angular.extend({}, $modalProvider.defaults, options);
 				$modal.$options.$scope = $modal.$options.$scope && $modal.$options.$scope.$new() || $rootScope.$new();
@@ -527,31 +655,69 @@ angular
 					if(options[key]) $scope[key] = $sce.trustAsHtml(options[key]);
 				});
 
-				function onKeydown (event) {
+				$modal.$onKeydown = function (event) {
 					var keyCode = event.keyCode;
 
 					if(keyCode === 27) { // ESC
 						$modal.leave();
 					}
-				}
+				};
 
-				function onResize (event) {
+				$modal.$onResize = function (event) {
 					$modal.applyPosition();
-				}
+				};
 
-				function onBackgroundClick () {
+				$modal.$onBackgroundClick = function () {
 					$modal.leave();
-				}
+				};
 
-				function onElementEnter () {
+				$modal.$onElementEnter = function () {};
+
+				$modal.$onBackgroundEnter = function () {};
+
+				$modal.$onBackgroundLeave = function () {};
+
+				$modal.$onElementLeave = function () {};
+
+				$modal.$compileElement = function () {
+					return $compile($modal.$element)($scope);
+				};
+
+				$modal.$onTemplateLoaded = function (template) {
+					$modal.$element = $element = angular.element(template);
+					$modal.$compileElement();
+
+					if(options.backdrop) {
+						$modal.$bg = $bg = angular.element('<div class="' + $modal.$options.bgClass + '"></div>');
+						$modal.$bg.css('display', 'block');
+						$animate.enter($modal.$bg, $target, $target, $modal.$onBackgroundEnter);
+					}
+
+					$modal.$element.css({
+						opacity: 1,
+						visibility: 'visible',
+						display: 'block'
+					});
+
+					if($fd.large()) {
+						if(options.animation) {
+							if(options.backdrop) {
+								$modal.$bg.addClass(options.backdropAnimation);
+							}
+
+							$modal.$element.addClass(options.animation);
+						}
+					}
+
+					var promise = $animate.enter($modal.$element, $target, $target, $modal.$onElementEnter);
+					if(promise && promise.then) promise.then($modal.$onElementEnter);
+
 					$modal.applyPosition();
-				}
 
-				function onBackgroundEnter () {}
+					$window.on('resize', $modal.$onResize);
 
-				function onBackgroundLeave () {}
-
-				function onElementLeave () {}
+					$scope.$emit(options.name + '.enter.after', $modal);
+				};
 
 				$modal.$getTemplate = function () {
 					var deferred = $q.defer();
@@ -561,9 +727,7 @@ angular
 					return deferred.promise;
 				};
 
-				$modal.applyPosition = function () {
-					var $element = $modal.$element;
-
+				$modal.$applyPosition = function () {
 					$element
 						.addClass('open')
 						.css({
@@ -576,113 +740,101 @@ angular
 
 					$modal.$isShown = true;
 					$scope.$$phase || ($scope.$root && $scope.$root.$$phase) || $scope.$digest();
+
+					$scope.$emit(options.name + '.positioning.after', $modal);
 				};
 
 				$modal.$unbindEvents = function () {
-					if($scope.$emit('modal.unbind.before', $modal).defaultPrevented) {
+					if($scope.$emit(options.name + '.unbind.before', $modal).defaultPrevented) {
 						return;
 					}
 
 					if(options.closeOnEsc) {
-						$document.off('keydown', onKeydown);
+						$document.off('keydown', $modal.$onKeydown);
 					}
 
 					if(options.backdrop) {
-						$modal.$bg.off('click', onBackgroundClick);
+						$modal.$bg.off('click', $modal.$onBackgroundClick);
 					}
 
-					$scope.$emit('modal.unbind.after', $modal);
+					$scope.$emit(options.name + '.unbind.after', $modal);
 				};
 
 				$modal.$bindEvents = function () {
-					if($scope.$emit('modal.bind.before', $modal).defaultPrevented) {
+					if($scope.$emit(options.name + '.bind.before', $modal).defaultPrevented) {
 						return;
 					}
 
 					if(options.closeOnEsc) {
-						$document.on('keydown', onKeydown);
+						$document.on('keydown', $modal.$onKeydown);
 					}
 
 					if(options.backdrop && options.closeOnBackgroundClick) {
-						$modal.$bg.on('click', onBackgroundClick);
+						$modal.$bg.on('click', $modal.$onBackgroundClick);
 					}
 
-					$window.off('resize', onResize);
+					$window.off('resize', $modal.$onResize);
 
-					$scope.$emit('modal.bind.after', $modal);
+					$scope.$emit(options.name + '.bind.after', $modal);
 				};
 
 				$modal.$leave = function () {
-					if(!$modal.$isShown) return;
-
-					if($scope.$emit('modal.leave.before', $modal).defaultPrevented) {
-						return;
-					}
-
-					var promise = $animate.leave($modal.$element, onElementLeave);
-					if(promise && promise.then) promise.then(onElementLeave);
+					var promise = $animate.leave($modal.$element, $modal.$onElementLeave);
+					if(promise && promise.then) promise.then($modal.$onElementLeave);
 
 					if(options.backdrop) {
-						var promise = $animate.leave($modal.$bg, onBackgroundLeave);
-						if(promise && promise.then) promise.then(onBackgroundLeave);
+						var promise = $animate.leave($modal.$bg, $modal.$onBackgroundLeave);
+						if(promise && promise.then) promise.then($modal.$onBackgroundLeave);
 					}
 
 					$modal.$isShown = false;
 					$scope.$$phase || ($scope.$root && $scope.$root.$$phase) || $scope.$digest();
 
 					$modal.$unbindEvents();
+
+					$scope.$emit(options.name + '.leave.after', $modal);
 				};
 
 				$modal.leave = function () {
-					$modal.$leave();
+					if(!$modal.$isShown) return;
+
+					if($scope.$emit(options.name + '.leave.before', $modal).defaultPrevented) {
+						return;
+					}
+
+					$timeout(function () {
+						$modal.$leave();
+					});
 				};
 
 				$modal.$enter = function () {
 					if($modal.$isShown) return;
 
-					if($scope.$emit('modal.enter.before', $modal).defaultPrevented) {
+					if($scope.$emit(options.name + '.enter.before', $modal).defaultPrevented) {
 						return;
 					}
 
-					function onTemplateLoaded (template) {
-						$modal.$element = angular.element(template);
-						$modal.$element = $compile($modal.$element)($modal.$options.$scope);
-
-						if(options.backdrop) {
-							$modal.$bg = angular.element('<div class="' + $modal.$options.bgClass + '"></div>');
-							$modal.$bg.css('display', 'block');
-							$animate.enter($modal.$bg, element, element, onBackgroundEnter);
-						}
-
-						$modal.$element.css({
-							opacity: 1,
-							visibility: 'visible',
-							display: 'block'
-						});
-
-						if($fd.large()) {
-							if(options.animation) {
-								if(options.backdrop) {
-									$modal.$bg.addClass(options.backdropAnimation);
-								}
-
-								$modal.$element.addClass(options.animation);
-							}
-						}
-
-						var promise = $animate.enter($modal.$element, element, element, onElementEnter);
-						if(promise && promise.then) promise.then(onElementEnter);
-
-						$window.on('resize', onResize);
-
-						$scope.$emit('modal.enter.after', $modal);
-					}
-
-					$modal.$getTemplate().then(onTemplateLoaded);
+					$modal.$getTemplate().then($modal.$onTemplateLoaded);
 				};
 
 				$modal.enter = function () {
+					if($scope.$emit(options.name + '.enter.before', $modal).defaultPrevented) {
+						return;
+					}
+
 					$modal.$enter();
+				};
+
+				$modal.applyPosition = function () {
+					if($scope.$emit(options.name + '.positioning.after', $modal).defaultPrevented) {
+						return;
+					}
+
+					$modal.$applyPosition();
+				};
+				
+				$modal.toggle = function () {
+					$modal.$isShown ? $modal.leave() : $modal.enter();
 				};
 
 				$scope.$show = function () {
@@ -999,18 +1151,162 @@ angular
 		var $tooltipProvider = this;
 
 		this.defaults = {
-			name: 'tooltip'
+			name: 'tooltip',
+			animation: 'am-fade',
+			align: 'right'
 		};
 
-		this.$get = ["$animate", "$rootScope", "$q", "$fd", "$timeout", "$position", "$templateCache", "$compile", "$window", function ($animate, $rootScope, $q, $fd, $timeout, $position, $templateCache, $compile, $window) {
+		this.$get = ["$animate", "$rootScope", "$q", "$fd", "$document", "$timeout", "$position", "$templateCache", "$compile", "$window", function ($animate, $rootScope, $q, $fd, $document, $timeout, $position, $templateCache, $compile, $window) {
+			$window = angular.element($window);
+			$document = angular.element($document);
+
 			function TooltipFactory ($target, options) {
-				var $tooltip = {};
+				var $tooltip = {}, $scope, $element;
+
+				$tooltip.$target = $target;
+				options = $tooltip.$options = angular.extend({}, $tooltipProvider.defaults, options);
+				$tooltip.$options.$scope = $scope = $tooltip.$options.$scope || $rootScope.$new();
+				$tooltip.$isShown = false;
+
+				$tooltip.getTemplate = function (template) {
+					return $q.when($templateCache.get(options.templateUrl));
+				};
+
+				$tooltip.$applyPosition = function () {
+					var css,
+					leftOffset = Math.max(($target.width() - $element.width()) / 2, 8);
+
+					if ($fd.small() && !$fd.medium()) {
+						css = $position.directions.bottom($element, $target);
+
+						css[$fd.rtl ? 'right' : 'left'] = leftOffset;
+					} else {
+						css = $position.directions[options.align]($element, $target);
+					}
+
+					$element.attr('style', '').css(css);
+
+					$scope.$emit(options.name + '.positioning.after', $tooltip);
+				};
+
+				$tooltip.$onElementLeave = function () {};
+
+				$tooltip.$onElementEnter = function () {};
+
+				$tooltip.$onBodyClick = function (event) {
+					if(event.target !== $tooltip.$target[0]) {
+						$tooltip.leave();
+					}
+				};
+
+				$tooltip.$onResize = function () {
+					$tooltip.applyPosition();
+				};
+
+				$tooltip.$compileElement = function () {
+					return $compile($element)($scope);
+				};
+
+				$tooltip.$onTemplateLoaded = function (template) {
+					$tooltip.$element = $element = angular.element(template);
+					$tooltip.$compileElement();
+
+					$element.addClass(options.animation);
+
+					var promise = $animate.enter($element, $target, $target, $tooltip.$onElementEnter);
+					if(promise && promise.then) promise.then($tooltip.$onElementEnter);
+
+					requestAnimationFrame(function () {
+						$tooltip.applyPosition();
+					});
+
+					$tooltip.$isShown = true;
+					$scope.$$phase || ($scope.$root && $scope.$root.$$phase) || $scope.$digest();
+
+					$document.bind('click focus blur', $tooltip.$onBodyClick);
+					$window.on('resize', $tooltip.$onResize);
+
+					$scope.$emit(options.name + '.enter.after', $tooltip);
+				};
+
+				$tooltip.$enter = function () {
+					$tooltip.getTemplate().then($tooltip.$onTemplateLoaded);
+				};
+
+				$tooltip.$leave = function () {
+					var promise = $animate.leave($element, $tooltip.$onElementLeave);
+					if(promise && promise.then) promise.then($tooltip.$onElementLeave);
+
+					$tooltip.$isShown = false;
+					$scope.$$phase || ($scope.$root && $scope.$root.$$phase) || $scope.$digest();
+
+					$document.unbind('click focus blur', $tooltip.$onBodyClick);
+					$window.off('resize', $tooltip.$onResize);
+
+					$scope.$emit(options.name + '.leave.after', $tooltip);
+				};
+
+				$tooltip.applyPosition = function () {
+					if($scope.$emit(options.name + '.positioning.before', $tooltip).defaultPrevented) {
+						return;
+					}
+
+					$tooltip.$applyPosition();
+				};
+
+				$tooltip.enter = function () {
+					if($tooltip.$isShown) return;
+
+					if($scope.$emit(options.name + '.enter.before', $tooltip).defaultPrevented) {
+						return;
+					}
+
+					$timeout(function () {
+						$tooltip.$enter();
+					});
+				};
+
+				$tooltip.leave = function () {
+					if(!$tooltip.$isShown) return;
+
+					if($scope.$emit(options.name + '.leave.before', $tooltip).defaultPrevented) {
+						return;
+					}
+
+					$timeout(function () {
+						$tooltip.$leave();
+					});
+				};
+
+				$tooltip.toggle = function () {
+					$tooltip.$isShown ? $tooltip.leave() : $tooltip.enter();
+				};
+
 				return $tooltip;
 			}
 
 			return TooltipFactory;
 		}];
-	});
+	})
+
+	.directive('fdTooltip', ["$tooltip", function ($tooltip) {
+		return {
+			restrict: 'A',
+			link: function (scope, element, attrs) {
+				var options = {
+					$scope: scope
+				};
+
+				angular.forEach(['content', 'align', 'templateUrl'], function (key) {
+					if(angular.isDefined(attrs[key])) options[key] = attrs[key];
+				});
+
+				var tooltip = $tooltip(element, options);
+
+				element.on('click', tooltip.toggle);
+			}
+		};
+	}]);
 'use strict';
 
 angular
@@ -1433,4 +1729,12 @@ angular
 				hasDropdown.$setDropdown(dropdown);
 			}
 		};
+	});
+'use strict';
+
+angular
+	.module('ngFoundation.typeahead', [])
+
+	.directive('fdTypeahead', function () {
+
 	});
