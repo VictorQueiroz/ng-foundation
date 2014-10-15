@@ -1,6 +1,7 @@
 angular
 	.module('ngFoundation', [
 		'ngFoundation.foundation',
+		'ngFoundation.helpers',
 		'ngFoundation.dropdown',
 		'ngFoundation.tooltip',
 		'ngFoundation.tabs',
