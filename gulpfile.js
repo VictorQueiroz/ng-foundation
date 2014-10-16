@@ -1,4 +1,5 @@
 var gulp = require('gulp');
+var karma = require('karma').server;
 var path = require('path');
 
 var concat = require('gulp-concat');
@@ -38,6 +39,12 @@ gulp.task('templates', function () {
 		}))
 		.pipe(uglify())
 		.pipe(gulp.dest(dest));
+});
+
+gulp.task('test', function (done) {
+	karma.start({
+		configFile: path.join(__dirname, 'karma.conf.js')
+	}, done);
 });
 
 gulp.task('watch', ['scripts', 'templates'], function () {

@@ -1160,6 +1160,8 @@ angular
 			$window = angular.element($window);
 			$document = angular.element($document);
 
+			var requestAnimationFrame = window.requestAnimationFrame || setTimeout;
+
 			function TooltipFactory ($target, options) {
 				var $tooltip = {}, $scope, $element;
 
