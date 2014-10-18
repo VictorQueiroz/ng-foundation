@@ -1312,7 +1312,7 @@ angular
 'use strict';
 
 angular
-	.module('ngFoundation.topbar', [])
+	.module('ngFoundation.topbar', ['ngAnimate'])
 
 	.config(["$fdProvider", function ($fdProvider) {
 		$fdProvider.registerMedia('topbar', 'foundation-mq-topbar');
@@ -1597,13 +1597,14 @@ angular
 
 		this.$setMoved = function () {
 			ctrl.moved = true;
-			$element.addClass('moved');
+			$animate.addClass('moved', $element);
 		};
 
 		this.$setNotMoved = function () {
 			ctrl.moved = false;
+
 			setTimeout(function () {
-				$element.removeClass('moved');
+				$animate.removeClass('moved', $element);
 			}, 300);
 		};
 
