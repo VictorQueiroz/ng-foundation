@@ -27,15 +27,16 @@ angular
 			name: 'alert',
 			templateUrl: 'alert/alert.tpl.html',
 			animation: 'am-slide-bottom',
-			duration: 3,
-			type: 'alert'
+			duration: 6,
+			type: 'alert',
+			enter: true
 		};
 
 		this.$get = ["$modal", "$timeout", function ($modal, $timeout) {
-			function $AlertFactory ($target, options) {
+			function $AlertFactory (options) {
 				var $alert = {}, $scope, $element;
 				options = $alert.$options = angular.extend({}, $alertProvider.defaults, options);
-				$alert = $modal($target, options);
+				$alert = $modal(options);
 				$scope = options.$scope;
 
 				angular.forEach(['content'], function (key) {
@@ -92,16 +93,18 @@ angular
 	.directive('fdAlert', ["$alert", function ($alert) {
 		return {
 			restrict: 'A',
+			scope: {},
 			link: function (scope, element, attrs) {
 				var options = {
-					$scope: scope
+					$scope: scope,
+					enter: false
 				};
 
 				angular.forEach(['content', 'type', 'animation', 'duration'], function (key) {
 					if(angular.isDefined(attrs[key])) options[key] = attrs[key];
 				});
 
-				var alert = $alert(element, options);
+				var alert = $alert(options);
 
 				element.on('click', alert.toggle);
 			}
@@ -634,16 +637,21 @@ angular
 			backdrop: true,
 			backdropAnimation: 'am-fade',
 			bgClass: 'reveal-modal-bg',
-			rootElement: 'body'
+			rootElement: 'body',
+			container: false,
+			enter: true
 		};
 
 		this.$get = ["$rootScope", "$window", "$fd", "$sce", "$animate", "$q", "$timeout", "$compile", "$document", "$templateCache", function ($rootScope, $window, $fd, $sce, $animate, $q, $timeout, $compile, $document, $templateCache) {
 			$window = angular.element($window);
-			var body = angular.element($document.body);
 			$document = angular.element($document);
 
-			function $ModalFactory ($target, options) {
-				var $modal = {}, $scope, $element, $bg;
+			function findElement (query, element) {
+				return angular.element((element || document).querySelectorAll(query));
+			}
+
+			function $ModalFactory (options) {
+				var $modal = {}, $scope, $element, $bg, parent, after;
 
 				options = $modal.$options = angular.extend({}, $modalProvider.defaults, options);
 				$modal.$options.$scope = $modal.$options.$scope && $modal.$options.$scope.$new() || $rootScope.$new();
@@ -654,6 +662,10 @@ angular
 				angular.forEach(['content'], function (key) {
 					if(options[key]) $scope[key] = $sce.trustAsHtml(options[key]);
 				});
+
+				if(!options.container) {
+					options.container = 'body';
+				}
 
 				$modal.$onKeydown = function (event) {
 					var keyCode = event.keyCode;
@@ -667,8 +679,10 @@ angular
 					$modal.applyPosition();
 				};
 
-				$modal.$onBackgroundClick = function () {
-					$modal.leave();
+				$modal.$onBackgroundClick = function (event) {
+					if(event.target === $modal.$bg[0]) {
+						$modal.leave();
+					}
 				};
 
 				$modal.$onElementEnter = function () {};
@@ -689,14 +703,19 @@ angular
 
 					if(options.backdrop) {
 						$modal.$bg = $bg = angular.element('<div class="' + $modal.$options.bgClass + '"></div>');
-						$modal.$bg.css('display', 'block');
-						$animate.enter($modal.$bg, $target, $target, $modal.$onBackgroundEnter);
+						
+						angular.element(document.body).css('overflow', 'hidden');
+
+						$modal.$bg.css('display', 'block').css('overflow', 'scroll');
+
+						$animate.enter($modal.$bg, parent, after, $modal.$onBackgroundEnter);
+						parent = $modal.$bg;
 					}
 
 					$modal.$element.css({
 						opacity: 1,
 						visibility: 'visible',
-						display: 'block'
+						display: 'block',
 					});
 
 					if($fd.large()) {
@@ -708,8 +727,7 @@ angular
 							$modal.$element.addClass(options.animation);
 						}
 					}
-
-					var promise = $animate.enter($modal.$element, $target, $target, $modal.$onElementEnter);
+					var promise = $animate.enter($modal.$element, parent, after, $modal.$onElementEnter);
 					if(promise && promise.then) promise.then($modal.$onElementEnter);
 
 					$modal.applyPosition();
@@ -726,6 +744,8 @@ angular
 					});
 					return deferred.promise;
 				};
+
+				$modal.$onDocumentClick = function (event) {};
 
 				$modal.$applyPosition = function () {
 					$element
@@ -757,6 +777,8 @@ angular
 						$modal.$bg.off('click', $modal.$onBackgroundClick);
 					}
 
+					$document.unbind('focus click', $modal.$onDocumentClick);
+
 					$scope.$emit(options.name + '.unbind.after', $modal);
 				};
 
@@ -773,7 +795,9 @@ angular
 						$modal.$bg.on('click', $modal.$onBackgroundClick);
 					}
 
-					$window.off('resize', $modal.$onResize);
+					$window.on('resize', $modal.$onResize);
+
+					$document.bind('focus click', $modal.$onDocumentClick);
 
 					$scope.$emit(options.name + '.bind.after', $modal);
 				};
@@ -786,6 +810,8 @@ angular
 						var promise = $animate.leave($modal.$bg, $modal.$onBackgroundLeave);
 						if(promise && promise.then) promise.then($modal.$onBackgroundLeave);
 					}
+
+					angular.element(document.body).css('overflow', 'scroll');
 
 					$modal.$isShown = false;
 					$scope.$$phase || ($scope.$root && $scope.$root.$$phase) || $scope.$digest();
@@ -813,6 +839,14 @@ angular
 					if($scope.$emit(options.name + '.enter.before', $modal).defaultPrevented) {
 						return;
 					}
+
+					if(angular.isElement(options.container)) {
+						parent = options.container;
+					} else {
+						parent = options.container ? findElement(options.container) : null;
+					}
+
+					after = null;
 
 					$modal.$getTemplate().then($modal.$onTemplateLoaded);
 				};
@@ -845,6 +879,10 @@ angular
 					$modal.leave();
 				};
 
+				if(options.enter) {
+					$modal.enter();
+				}
+
 				return $modal;
 			}
 
@@ -857,15 +895,16 @@ angular
 			restrict: 'A',
 			link: function (scope, element, attrs) {
 				var options = {
-					$scope: scope
+					$scope: scope,
+					enter: false
 				};
 
 				angular.forEach(['content'], function (key) {
 					if(angular.isDefined(attrs[key])) options[key] = attrs[key];
 				});
 
-				var modal = $modal(element, options);
-				element.on('click', modal.enter);
+				var modal = $modal(options);
+				element.on('click', modal.toggle);
 			}
 		};
 	}]);
@@ -1195,7 +1234,7 @@ angular
 
 				$tooltip.$onElementEnter = function () {};
 
-				$tooltip.$onBodyClick = function (event) {
+				$tooltip.$onDocumentClick = function (event) {
 					if(event.target !== $tooltip.$target[0]) {
 						$tooltip.leave();
 					}
@@ -1225,7 +1264,7 @@ angular
 					$tooltip.$isShown = true;
 					$scope.$$phase || ($scope.$root && $scope.$root.$$phase) || $scope.$digest();
 
-					$document.bind('click focus blur', $tooltip.$onBodyClick);
+					$document.bind('click focus blur', $tooltip.$onDocumentClick);
 					$window.on('resize', $tooltip.$onResize);
 
 					$scope.$emit(options.name + '.enter.after', $tooltip);
@@ -1242,7 +1281,7 @@ angular
 					$tooltip.$isShown = false;
 					$scope.$$phase || ($scope.$root && $scope.$root.$$phase) || $scope.$digest();
 
-					$document.unbind('click focus blur', $tooltip.$onBodyClick);
+					$document.unbind('click focus blur', $tooltip.$onDocumentClick);
 					$window.off('resize', $tooltip.$onResize);
 
 					$scope.$emit(options.name + '.leave.after', $tooltip);

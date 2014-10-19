@@ -9,15 +9,16 @@ angular
 			name: 'alert',
 			templateUrl: 'alert/alert.tpl.html',
 			animation: 'am-slide-bottom',
-			duration: 3,
-			type: 'alert'
+			duration: 6,
+			type: 'alert',
+			enter: true
 		};
 
 		this.$get = function ($modal, $timeout) {
-			function $AlertFactory ($target, options) {
+			function $AlertFactory (options) {
 				var $alert = {}, $scope, $element;
 				options = $alert.$options = angular.extend({}, $alertProvider.defaults, options);
-				$alert = $modal($target, options);
+				$alert = $modal(options);
 				$scope = options.$scope;
 
 				angular.forEach(['content'], function (key) {
@@ -74,16 +75,18 @@ angular
 	.directive('fdAlert', function ($alert) {
 		return {
 			restrict: 'A',
+			scope: {},
 			link: function (scope, element, attrs) {
 				var options = {
-					$scope: scope
+					$scope: scope,
+					enter: false
 				};
 
 				angular.forEach(['content', 'type', 'animation', 'duration'], function (key) {
 					if(angular.isDefined(attrs[key])) options[key] = attrs[key];
 				});
 
-				var alert = $alert(element, options);
+				var alert = $alert(options);
 
 				element.on('click', alert.toggle);
 			}

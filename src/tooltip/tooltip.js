@@ -51,7 +51,7 @@ angular
 
 				$tooltip.$onElementEnter = function () {};
 
-				$tooltip.$onBodyClick = function (event) {
+				$tooltip.$onDocumentClick = function (event) {
 					if(event.target !== $tooltip.$target[0]) {
 						$tooltip.leave();
 					}
@@ -81,7 +81,7 @@ angular
 					$tooltip.$isShown = true;
 					$scope.$$phase || ($scope.$root && $scope.$root.$$phase) || $scope.$digest();
 
-					$document.bind('click focus blur', $tooltip.$onBodyClick);
+					$document.bind('click focus blur', $tooltip.$onDocumentClick);
 					$window.on('resize', $tooltip.$onResize);
 
 					$scope.$emit(options.name + '.enter.after', $tooltip);
@@ -98,7 +98,7 @@ angular
 					$tooltip.$isShown = false;
 					$scope.$$phase || ($scope.$root && $scope.$root.$$phase) || $scope.$digest();
 
-					$document.unbind('click focus blur', $tooltip.$onBodyClick);
+					$document.unbind('click focus blur', $tooltip.$onDocumentClick);
 					$window.off('resize', $tooltip.$onResize);
 
 					$scope.$emit(options.name + '.leave.after', $tooltip);
