@@ -1636,14 +1636,15 @@ angular
 
 		this.$setMoved = function () {
 			ctrl.moved = true;
-			$animate.addClass('moved', $element);
+
+			$element.addClass('moved');
 		};
 
 		this.$setNotMoved = function () {
 			ctrl.moved = false;
 
-			setTimeout(function () {
-				$animate.removeClass('moved', $element);
+			$timeout(function () {
+				$element.removeClass('moved');
 			}, 300);
 		};
 
