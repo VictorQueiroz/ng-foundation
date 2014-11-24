@@ -27,7 +27,7 @@ angular
 				$tooltip.$isShown = false;
 
 				$tooltip.getTemplate = function (template) {
-					return $q.when($templateCache.get(options.templateUrl));
+					return $q.when($templateCache.get(options.templateUrl) || $http.get(options.templateUrl));
 				};
 
 				$tooltip.$applyPosition = function () {
